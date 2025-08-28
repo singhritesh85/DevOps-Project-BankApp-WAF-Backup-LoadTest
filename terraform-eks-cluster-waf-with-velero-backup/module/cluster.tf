@@ -13,6 +13,8 @@ resource "aws_eks_cluster" "eksdemo" {
     endpoint_private_access = true
   }
 
+  enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+
   tags = {
     Environment = var.env     ##"Dev"
     Owner       = "Ops"
@@ -36,6 +38,26 @@ resource "aws_eks_cluster" "eksdemo" {
 # IAM Role for EKS Cluster
 #-------------------------
 
+resource "aws_iam_policy" "iam_policy_for_eks_logs_to_cloudwatch" {
+  name        = "eks-logs-to-cloudwatch"
+  description = "IAM Policy for Sending EKS Logs to CloudWatch Log Group"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Effect   = "Allow"
+        Resource = "arn:aws:logs:${data.aws_caller_identity.G_Duty.account_id}:log-group:/aws/eks/${var.eks_cluster}-${var.env}/cluster:log-stream:*"
+      },
+    ]
+  })
+}
+
 resource "aws_iam_role" "eksdemorole" {
   name = "${var.eks_iam_role_name}-${var.env}"
 
@@ -55,6 +77,11 @@ resource "aws_iam_role_policy_attachment" "eksdemorole-AmazonEKSClusterPolicy" {
 
 resource "aws_iam_role_policy_attachment" "eksdemorole-AmazonEKSVPCResourceController" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+  role       = aws_iam_role.eksdemorole.name
+}
+
+resource "aws_iam_role_policy_attachment" "eks-logs-to-cloudwatch" {
+  policy_arn = aws_iam_policy.iam_policy_for_eks_logs_to_cloudwatch.arn
   role       = aws_iam_role.eksdemorole.name
 }
 
@@ -805,3 +832,4 @@ resource "aws_iam_instance_profile" "karpenter_instance_profile" {
   name = "karpenter-eks-instance-profile"
   role = aws_iam_role.karpenter_node_iam_role.name
 }
+
