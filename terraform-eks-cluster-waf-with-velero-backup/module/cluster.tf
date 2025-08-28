@@ -199,9 +199,9 @@ resource "aws_eks_node_group" "eksnode" {
   } 
 
   scaling_config {
-    desired_size = 6
-    max_size     = 6
-    min_size     = 6
+    desired_size = 2
+    max_size     = 2
+    min_size     = 2
   }
 
   update_config {
@@ -832,4 +832,5 @@ resource "aws_iam_instance_profile" "karpenter_instance_profile" {
   name = "karpenter-eks-instance-profile"
   role = aws_iam_role.karpenter_node_iam_role.name
 }
+
 
